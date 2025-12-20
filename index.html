@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>體質掌控 v7.1 (修復版)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#be185d', // Rose 700
+                        secondary: '#fce7f3', // Rose 100
+                        accent: '#9d174d',
+                        dark: '#4c0519', // Rose 950
+                        cream: '#fff1f2', // Rose 50
+                        surface: '#ffffff',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Playfair+Display:wght@700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fff1f2; /* Cream background */
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: 90px; /* Space for bottom nav */
+            color: #4c0519;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* Glassmorphism utils */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .glass-dark {
+            background: rgba(76, 5, 25, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Input Styling */
+        .input-premium {
+            transition: all 0.3s ease;
+        }
+        .input-premium:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(190, 24, 93, 0.15), 0 8px 10px -6px rgba(190, 24, 93, 0.1);
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; color: #9f1239;">
+            <div class="spinner" style="border-top-color: #be123c;"></div>
+            <p style="margin-top: 10px; font-weight: 500; font-size: 14px; letter-spacing: 1px;">LOADING BEAUTY...</p>
+        </div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Safe Icon Loader (Fix for Error #130) ---
+        // 確保即使 Lucide 載入失敗或缺少圖示，App 也不會崩潰
+        const lucideLib = window.lucide || {};
+        
+        const getIcon = (name) => {
+            const IconComponent = lucideLib[name];
+            // 如果找不到圖示，回傳一個不會報錯的空元件
+            if (!IconComponent) {
+                return (props) => <span style={{display:'inline-block', width: props.size || 18, height: props.size || 18}}></span>; 
+            }
+            return IconComponent;
+        };
+
+        // Initialize all icons safely
+        const LayoutDashboard = getIcon('LayoutDashboard');
+        const LineChart = getIcon('LineChart');
+        const Link = getIcon('Link');
+        const Scale = getIcon('Scale');
+        const Activity = getIcon('Activity');
+        const TrendingUp = getIcon('TrendingUp');
+        const RefreshCw = getIcon('RefreshCw');
+        const CloudLightning = getIcon('CloudLightning');
+        const Sparkles = getIcon('Sparkles');
+
+        // Helper for dynamic icon rendering if needed
+        const SafeIcon = ({ icon: Icon, ...props }) => Icon ? <Icon {...props} /> : <span style={{width:20, display:'inline-block'}}></span>;
+
+        // --- Logic (Unchanged) ---
+        const getTrafficLight = (hrv, bhr, sleepTimeStr) => {
+            if (!hrv || !bhr) return null;
+            const hrvVal = parseFloat(hrv);
+            const bhrVal = parseFloat(bhr);
+            let isLateSleep = false;
+            if (sleepTimeStr) {
+                const [h, m] = sleepTimeStr.split(':').map(Number);
+                if ((h === 23 && m >= 30) || (h >= 0 && h < 4)) isLateSleep = true;
+            }
+            if (hrvVal < 25 || bhrVal > 73 || isLateSleep) return { status: 'red', bg: 'bg-rose-500', text: 'text-white', title: 'Rest & Recover', sub: '強制休息日', desc: '神經系統疲勞或熬夜，請多休息' };
+            if (hrvVal > 35 && bhrVal < 70 && !isLateSleep) return { status: 'green', bg: 'bg-emerald-500', text: 'text-white', title: 'Ready to Train', sub: '適合訓練日', desc: '狀態極佳，可重訓 + Zone 2' };
+            return { status: 'yellow', bg: 'bg-amber-400', text: 'text-amber-950', title: 'Zone 2 Only', sub: '有氧修復日', desc: '僅限低強度有氧，避免皮質醇堆積' };
+        };
+
+        const getCycleInfo = (day) => {
+            const d = parseInt(day);
+            if (isNaN(d)) return null;
+            if (d >= 1 && d <= 4) return { phase: '易水腫期', hint: '體重虛胖勿焦慮' };
+            if (d >= 5 && d <= 7) return { phase: '排水轉折', hint: '水分即將排出' };
+            if (d >= 8 && d <= 14) return { phase: '黃金燃脂', hint: '減脂效率最高' };
+            return { phase: '黃體保養', hint: '代謝高・食慾增' };
+        };
+
+        const analyzeComposition = (tbw, weight) => {
+            if (!tbw) return null;
+            const w = parseFloat(tbw);
+            if (w > 29.2) return { type: 'water', text: '💧 高度水腫', color: 'text-blue-500', bg: 'bg-blue-50' };
+            if (w < 28.8) return { type: 'dry', text: '🍂 身體偏乾', color: 'text-amber-600', bg: 'bg-amber-50' };
+            return { type: 'ok', text: '✨ 水分標準', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+        };
+
+        // --- Chart Component (Styled) ---
+        const ChartView = ({ historyData }) => {
+            const canvasRef1 = useRef(null); 
+            const canvasRef2 = useRef(null); 
+            const canvasRef3 = useRef(null);
+            
+            const chartInstance1 = useRef(null);
+            const chartInstance2 = useRef(null);
+            const chartInstance3 = useRef(null);
+            
+            const [days, setDays] = useState(14); 
+
+            useEffect(() => {
+                const sortedDates = Object.keys(historyData).sort().slice(-days);
+                const labels = sortedDates.map(d => d.slice(5).replace('-','/')); 
+                
+                const weights = sortedDates.map(d => historyData[d].weight);
+                const tbws = sortedDates.map(d => historyData[d].tbw);
+                const hrvs = sortedDates.map(d => historyData[d].hrv);
+                const bhrs = sortedDates.map(d => historyData[d].bhr);
+                const bodyFats = sortedDates.map(d => historyData[d].bodyFat);
+
+                const fatMassRaw = weights.map((w, i) => {
+                    const bf = parseFloat(bodyFats[i]);
+                    const weight = parseFloat(w);
+                    return (bf && weight) ? (weight * bf / 100) : null;
+                });
+
+                const fatMassTrend = fatMassRaw.map((val, index, arr) => {
+                    if (val === null) return null;
+                    let sum = 0, count = 0;
+                    for (let i = Math.max(0, index - 6); i <= index; i++) {
+                        if (arr[i] !== null) { sum += arr[i]; count++; }
+                    }
+                    return count ? (sum / count) : null;
+                });
+
+                // Common Chart Options
+                const commonOptions = {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: "'Noto Sans TC'" } } },
+                        title: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        y: { display: false }, // Hide Y axis for cleaner look
+                    },
+                    elements: {
+                        point: { radius: 2, hitRadius: 10 }
+                    }
+                };
+
+                // 1. Body Wave
+                if (canvasRef1.current) {
+                    if (chartInstance1.current) chartInstance1.current.destroy();
+                    chartInstance1.current = new Chart(canvasRef1.current, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: '體重', data: weights, borderColor: '#881337', backgroundColor: '#881337', borderWidth: 2, tension: 0.4 },
+                                { label: '體水', data: tbws, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1, fill: true, tension: 0.4 }
+                            ]
+                        },
+                        options: commonOptions
+                    });
+                }
+
+                // 2. Actual Fat Trend
+                if (canvasRef3.current) {
+                    if (chartInstance3.current) chartInstance3.current.destroy();
+                    chartInstance3.current = new Chart(canvasRef3.current, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { type: 'line', label: '真實趨勢 (濾水)', data: fatMassTrend, borderColor: '#be123c', backgroundColor: '#be123c', borderWidth: 3, pointRadius: 0, tension: 0.4 },
+                                { type: 'bar', label: '每日數值', data: fatMassRaw, backgroundColor: '#e2e8f0', borderRadius: 4, barThickness: 8 }
+                            ]
+                        },
+                        options: commonOptions
+                    });
+                }
+
+                // 3. Nervous System
+                if (canvasRef2.current) {
+                    if (chartInstance2.current) chartInstance2.current.destroy();
+                    chartInstance2.current = new Chart(canvasRef2.current, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { label: 'HRV', data: hrvs, borderColor: '#10b981', backgroundColor: '#10b981', borderWidth: 2, tension: 0.4 },
+                                { label: '心率', data: bhrs, borderColor: '#f43f5e', backgroundColor: '#f43f5e', borderWidth: 1, borderDash: [5, 5], tension: 0.4 }
+                            ]
+                        },
+                        options: commonOptions
+                    });
+                }
+
+            }, [historyData, days]);
+
+            return (
+                <div className="space-y-6 animate-fade-in pb-20 pt-4">
+                    <div className="flex justify-center gap-2 mb-6">
+                        {[7, 14, 30].map(d => (
+                            <button key={d} onClick={() => setDays(d)}
+                                className={`px-5 py-2 rounded-full text-xs font-bold tracking-widest transition-all ${days === d ? 'bg-rose-900 text-white shadow-lg shadow-rose-900/20' : 'bg-white text-rose-300 border border-rose-100'}`}>
+                                {d} DAYS
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="glass p-5 rounded-3xl shadow-sm">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Sparkles size={16} className="text-rose-500" />
+                            <h3 className="text-sm font-bold text-rose-900 tracking-wide">真實體脂趨勢</h3>
+                        </div>
+                        <canvas ref={canvasRef3}></canvas>
+                        <p className="text-[10px] text-rose-400 mt-3 text-center opacity-80">紅線平穩 = 安心。忽略每日水分雜訊。</p>
+                    </div>
+
+                    <div className="glass p-5 rounded-3xl shadow-sm">
+                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">體態波段 (體重 vs 體水)</h3>
+                        <canvas ref={canvasRef1}></canvas>
+                    </div>
+
+                    <div className="glass p-5 rounded-3xl shadow-sm">
+                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">神經修復 (HRV vs BHR)</h3>
+                        <canvas ref={canvasRef2}></canvas>
+                    </div>
+                </div>
+            );
+        };
+
+        const InputView = ({ today, setToday, data, setData, cycleDay, cycleInfo, traffic, saveData, resetCycle, compAnalysis, isSyncing }) => (
+            <div className="space-y-6 animate-fade-in pb-10">
+                 
+                 {/* Premium Header Card */}
+                 <div className="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-600 to-rose-800 text-white p-6 pt-10 pb-8 rounded-b-[2.5rem] shadow-xl shadow-rose-500/20 -mx-4 sm:mx-0 sm:rounded-t-[2.5rem]">
+                    {/* Decorative Circles */}
+                    <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <div className="flex items-center gap-2 opacity-90">
+                                    <span className="text-xs font-bold tracking-[0.2em] uppercase">Cycle Day</span>
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tight mt-1" style={{fontFamily: '"Playfair Display", serif'}}>{cycleDay}</h1>
+                                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full mt-2 border border-white/10">
+                                    <span className="text-xs font-bold text-white">{cycleInfo.phase}</span>
+                                    <span className="text-[10px] text-white/80 border-l border-white/30 pl-2">{cycleInfo.hint}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-3">
+                                <div className="bg-black/20 backdrop-blur-sm rounded-lg flex items-center px-3 py-1.5">
+                                    <input type="date" value={today} onChange={(e) => setToday(e.target.value)}
+                                        className="bg-transparent text-white text-xs font-bold border-none outline-none text-right w-24 uppercase tracking-wider" />
+                                </div>
+                                <button onClick={resetCycle} className="text-[10px] bg-white text-rose-600 px-3 py-1.5 rounded-full font-bold shadow-sm hover:scale-105 transition-transform flex items-center gap-1">
+                                    <RefreshCw size={10} /> MC Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        {traffic ? (
+                            <div className={`glass-dark p-4 rounded-2xl flex items-center justify-between border-l-4 ${traffic.status === 'red' ? 'border-l-rose-400' : (traffic.status === 'green' ? 'border-l-emerald-400' : 'border-l-amber-400')}`}>
+                                <div>
+                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest text-rose-100">Daily Advisor</p>
+                                    <p className="font-bold text-lg text-white">{traffic.title}</p>
+                                    <p className="text-xs text-rose-200">{traffic.sub}</p>
+                                </div>
+                                <div className="text-right max-w-[50%]">
+                                    <p className="text-xs font-medium leading-relaxed opacity-90 text-white">{traffic.desc}</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-black/10 backdrop-blur-sm p-4 rounded-2xl text-center text-white/60 text-sm">
+                                等待輸入晨間數據...
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="px-2 sm:px-0 space-y-5">
+                    
+                    {/* Card: Body Composition */}
+                    <div className="glass p-5 rounded-3xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-rose-100 rounded-full text-rose-600"><Scale size={18} /></div>
+                                <h2 className="text-base font-bold text-rose-950">體態組成</h2>
+                            </div>
+                            {compAnalysis && <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${compAnalysis.bg} ${compAnalysis.color}`}>{compAnalysis.text}</span>}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <NumberInput label="體重" unit="kg" value={data.weight} onChange={v => setData({...data, weight: v})} placeholder="--" />
+                            <NumberInput label="體脂率" unit="%" value={data.bodyFat} onChange={v => setData({...data, bodyFat: v})} placeholder="--" />
+                            <NumberInput label="體水重" unit="kg" value={data.tbw} onChange={v => setData({...data, tbw: v})} placeholder="29.0" />
+                        </div>
+                    </div>
+
+                    {/* Card: Nervous System */}
+                    <div className="glass p-5 rounded-3xl">
+                        <div className="flex items-center gap-2 mb-4">
+                             <div className="p-2 bg-rose-100 rounded-full text-rose-600"><Activity size={18} /></div>
+                            <h2 className="text-base font-bold text-rose-950">神經與修復</h2>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <NumberInput label="HRV" unit="ms" value={data.hrv} onChange={v => setData({...data, hrv: v})} placeholder="--" step="1" />
+                                <NumberInput label="靜止心率" unit="bpm" value={data.bhr} onChange={v => setData({...data, bhr: v})} placeholder="--" step="1" />
+                            </div>
+                            <div className="pt-2">
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-[10px] font-bold text-rose-300 uppercase tracking-widest pl-1">入睡時間</label>
+                                    <span className="text-[10px] text-rose-500 font-bold">{data.sleepTime && ((parseInt(data.sleepTime.split(':')[0]) >= 23 && parseInt(data.sleepTime.split(':')[1]) >= 30) || (parseInt(data.sleepTime.split(':')[0]) < 4)) ? '🌙 注意作息' : ''}</span>
+                                </div>
+                                <input type="time" value={data.sleepTime} onChange={(e) => setData({...data, sleepTime: e.target.value})}
+                                    className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-3 text-lg font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card: Cardio */}
+                    <div className="glass p-5 rounded-3xl">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 bg-rose-100 rounded-full text-rose-600"><TrendingUp size={18} /></div>
+                            <h2 className="text-base font-bold text-rose-950">有氧累積</h2>
+                        </div>
+                         <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <input type="number" inputMode="decimal" value={data.zone2} onChange={(e) => setData({...data, zone2: e.target.value})} placeholder="0"
+                                    className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-4 text-xl font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium" />
+                            </div>
+                            <span className="text-rose-400 font-bold text-sm">mins</span>
+                         </div>
+                    </div>
+                </div>
+                <div className="h-4"></div>
+                
+                {/* Save Button */}
+                <button onClick={saveData} disabled={isSyncing}
+                    className={`w-full py-4 rounded-2xl font-bold text-base shadow-lg shadow-rose-900/10 flex items-center justify-center gap-2 active:scale-95 transition-all
+                    ${isSyncing ? 'bg-gray-400 text-white' : 'bg-rose-900 text-white'}`}>
+                    {isSyncing ? <div className="spinner"></div> : <SafeIcon icon={CloudLightning} size={18} />}
+                    {isSyncing ? 'SYNCING...' : 'SAVE DATA'}
+                </button>
+            </div>
+        );
+
+        // Premium Input Component with improved mobile UX
+        const NumberInput = ({ label, value, onChange, unit, placeholder, step="0.1" }) => (
+            <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-rose-300 uppercase tracking-widest pl-1">{label}</label>
+                <div className="relative group">
+                    <input type="number" inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} step={step}
+                        className="w-full bg-white border border-rose-100 rounded-2xl px-3 py-3 text-lg font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium placeholder-rose-100" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-300 pointer-events-none">{unit}</span>
+                </div>
+            </div>
+        );
+
+        const App = () => {
+            const [view, setView] = useState('input');
+            const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
+            
+            const [settings, setSettings] = useState(() => {
+                const s = localStorage.getItem('ht_v4_settings'); 
+                const defaultUrl = 'https://script.google.com/macros/s/AKfycbx49ZIG4Ht79xFffN9ZSejKcrBNuVp61MGdEByGiPGIg6pVa3xU0yL_ZZfSioYASfXc/exec';
+                if (s) {
+                    const parsed = JSON.parse(s);
+                    if (!parsed.sheetUrl) return { ...parsed, sheetUrl: defaultUrl };
+                    return parsed;
+                }
+                return { periodStartDate: new Date().toISOString().split('T')[0], sheetUrl: defaultUrl };
+            });
+
+            const [data, setData] = useState({ weight: '', bodyFat: '', tbw: '', hrv: '', bhr: '', sleepTime: '', zone2: '' });
+            const [isSyncing, setIsSyncing] = useState(false);
+            const [historyData, setHistoryData] = useState({});
+            const [showConfig, setShowConfig] = useState(false);
+
+            const cycleDay = useMemo(() => {
+                const start = new Date(settings.periodStartDate);
+                const current = new Date(today);
+                const diffTime = current - start;
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }, [today, settings.periodStartDate]);
+
+            useEffect(() => {
+                const hist = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
+                setHistoryData(hist);
+                if (hist[today]) setData(hist[today]);
+                else setData({ weight: '', bodyFat: '', tbw: '', hrv: '', bhr: '', sleepTime: '', zone2: '' });
+            }, [today]);
+
+            const saveData = async () => {
+                const hist = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
+                const payload = { ...data, cycleDay, date: today };
+                const newHist = { ...hist, [today]: payload };
+                localStorage.setItem('ht_v4_history', JSON.stringify(newHist));
+                setHistoryData(newHist);
+
+                if (settings.sheetUrl) {
+                    setIsSyncing(true);
+                    try {
+                        await fetch(settings.sheetUrl, {
+                            method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                        });
+                        alert('✨ 記錄與備份成功！');
+                    } catch (e) { alert('⚠️ 本機成功，雲端失敗'); } finally { setIsSyncing(false); }
+                } else {
+                    alert('✨ 記錄成功');
+                }
+            };
+
+            const resetCycle = () => {
+                if(confirm(`確定今天 (${today}) 是月經第一天？`)) {
+                    const newSettings = {...settings, periodStartDate: today};
+                    setSettings(newSettings);
+                    localStorage.setItem('ht_v4_settings', JSON.stringify(newSettings));
+                }
+            };
+
+            const traffic = getTrafficLight(data.hrv, data.bhr, data.sleepTime);
+            const cycleInfo = getCycleInfo(cycleDay);
+            const compAnalysis = analyzeComposition(data.tbw, data.weight);
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen relative overflow-hidden shadow-2xl bg-[#fff1f2]">
+                    <div className="p-4 sm:px-6 z-10 relative">
+                        {view === 'input' ? (
+                            <InputView 
+                                today={today} setToday={setToday} data={data} setData={setData}
+                                cycleDay={cycleDay} cycleInfo={cycleInfo} traffic={traffic}
+                                saveData={saveData} resetCycle={resetCycle} compAnalysis={compAnalysis}
+                                isSyncing={isSyncing}
+                            />
+                        ) : (
+                            <ChartView historyData={historyData} />
+                        )}
+                    </div>
+
+                    {/* Floating Bottom Nav */}
+                    <div className="fixed bottom-6 left-6 right-6 z-30 max-w-[calc(28rem-3rem)] mx-auto">
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-full px-2 py-2 flex justify-between items-center shadow-xl shadow-rose-900/5">
+                            
+                            <button onClick={() => setView('input')} 
+                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${view === 'input' ? 'bg-rose-900 text-white shadow-md' : 'text-rose-300 hover:bg-rose-50'}`}>
+                                <LayoutDashboard size={18} strokeWidth={2.5} />
+                                {view === 'input' && <span className="text-xs font-bold tracking-wide animate-fade-in">TODAY</span>}
+                            </button>
+                            
+                            <button onClick={() => setView('chart')} 
+                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${view === 'chart' ? 'bg-rose-900 text-white shadow-md' : 'text-rose-300 hover:bg-rose-50'}`}>
+                                <LineChart size={18} strokeWidth={2.5} />
+                                {view === 'chart' && <span className="text-xs font-bold tracking-wide animate-fade-in">TRENDS</span>}
+                            </button>
+
+                            <button onClick={() => setShowConfig(!showConfig)} className="w-12 h-12 flex items-center justify-center rounded-full text-rose-300 hover:bg-rose-50 transition-colors">
+                                <Link size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {showConfig && (
+                        <div className="fixed inset-0 bg-rose-900/30 backdrop-blur-sm z-40 flex items-center justify-center p-6 animate-fade-in">
+                            <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+                                <h3 className="font-bold text-lg text-rose-900 mb-4">Google Sheet Link</h3>
+                                <input type="text" value={settings.sheetUrl} 
+                                    onChange={(e) => {
+                                        const newS = {...settings, sheetUrl: e.target.value};
+                                        setSettings(newS);
+                                        localStorage.setItem('ht_v4_settings', JSON.stringify(newS));
+                                    }}
+                                    placeholder="API URL..."
+                                    className="w-full p-4 bg-rose-50 border border-rose-100 rounded-2xl mb-4 text-xs outline-none focus:border-rose-300 transition-colors text-rose-700" />
+                                <button onClick={() => setShowConfig(false)} className="w-full bg-rose-900 text-white py-4 rounded-2xl font-bold text-sm tracking-wide shadow-lg shadow-rose-900/20">DONE</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
