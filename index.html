@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>體質掌控 v7.2 (完美圖表版)</title>
+    <title>體質掌控 v7.3 (雲端修復版)</title>
     
     <!-- PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -445,7 +445,13 @@
                 if (settings.sheetUrl) {
                     setIsSyncing(true);
                     try {
-                        await fetch(settings.sheetUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        // FIX: Change Content-Type to text/plain to avoid CORS preflight and ensure GAS receives the body in no-cors mode
+                        await fetch(settings.sheetUrl, { 
+                            method: 'POST', 
+                            mode: 'no-cors', 
+                            headers: { 'Content-Type': 'text/plain' }, 
+                            body: JSON.stringify(payload) 
+                        });
                         alert('✨ 記錄與備份成功！');
                     } catch (e) { alert('⚠️ 本機成功，雲端失敗'); } finally { setIsSyncing(false); }
                 } else { alert('✨ 記錄成功'); }
