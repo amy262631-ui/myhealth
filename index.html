@@ -432,6 +432,49 @@
                 else setData({ weight: '', bodyFat: '', tbw: '', hrv: '', bhr: '', sleepTime: '', zone2: '' });
             }, [today]);
 
+            // ✨ 新增雲端同步區塊：一打開 App 就去 Google Sheet 抓資料
+            useEffect(() => {
+                const fetchCloudData = async () => {
+                    if (!settings.sheetUrl) return;
+
+                    try {
+                        console.log("正在同步雲端資料...");
+                        const response = await fetch(settings.sheetUrl); // 這裡會呼叫後端的 doGet
+                        const dataArray = await response.json();
+
+                        if (Array.isArray(dataArray)) {
+                            // 轉換資料格式：從 Array 轉成 Object
+                            const cloudHistory = {};
+                            dataArray.forEach(item => {
+                                if (item.date) {
+                                    cloudHistory[item.date] = item;
+                                }
+                            });
+
+                            // 1. 更新歷史資料 State
+                            setHistoryData(prev => ({...prev, ...cloudHistory}));
+                            
+                            // 2. 更新 LocalStorage (把雲端資料存入手機)
+                            const currentLocal = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
+                            const mergedData = { ...currentLocal, ...cloudHistory };
+                            localStorage.setItem('ht_v4_history', JSON.stringify(mergedData));
+
+                            // 3. 如果雲端有「今天」的資料，自動填入格子
+                            if (cloudHistory[today]) {
+                                setData(cloudHistory[today]);
+                                console.log("已自動填入今日雲端資料");
+                            }
+                        }
+                    } catch (e) {
+                        console.error("雲端同步失敗 (可能是離線或權限問題):", e);
+                        // 失敗不跳 Alert，以免干擾使用者體驗
+                    }
+                };
+
+                // 執行同步
+                fetchCloudData();
+            }, []); // 空陣列 [] 代表只在 App 剛開啟時執行一次
+
             const saveData = async () => {
                 const hist = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
                 const payload = { ...data, cycleDay, date: today };
