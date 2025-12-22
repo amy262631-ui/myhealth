@@ -5,14 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>體質掌控</title>
     
+    <!-- PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#be185d">
+    <!-- 使用 SVG 內建圖示，確保在任何裝置都能顯示 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
 
-    <link rel="icon" href="research_structure_strand_science_education_biology_genetics_string_dna_icon_210676.png">
-    <link rel="apple-touch-icon" href="research_structure_strand_science_education_biology_genetics_string_dna_icon_210676.png">
-
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,12 +30,15 @@
         }
     </script>
     
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
 
     <style>
@@ -43,32 +48,33 @@
             font-family: 'Noto Sans TC', sans-serif;
             background-color: #fff1f2;
             -webkit-tap-highlight-color: transparent;
-            padding-bottom: 90px;
+            padding-bottom: 120px; /* 預留底部導覽列空間 */
             color: #4c0519;
             padding-top: env(safe-area-inset-top);
-            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            padding-bottom: calc(120px + env(safe-area-inset-bottom));
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .animate-fade-in { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .glass {
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 15px -3px rgba(190, 24, 93, 0.05);
         }
         .glass-dark {
-            background: rgba(76, 5, 25, 0.9);
+            background: rgba(76, 5, 25, 0.95);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .input-premium:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(190, 24, 93, 0.15), 0 8px 10px -6px rgba(190, 24, 93, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px -2px rgba(190, 24, 93, 0.15);
         }
         .spinner {
             border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff;
@@ -95,30 +101,18 @@
         const RefreshCw = getIcon('RefreshCw');
         const CloudLightning = getIcon('CloudLightning');
         const Sparkles = getIcon('Sparkles');
+        const List = getIcon('List'); // 補回列表圖示
         const SafeIcon = ({ icon: Icon, ...props }) => Icon ? <Icon {...props} /> : null;
 
-        // --- Core SVG Icons (Embedded for reliability) ---
-        const IconDashboard = ({size=24, ...props}) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-                <rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" />
-            </svg>
-        );
-        const IconChart = ({size=24, ...props}) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
-            </svg>
-        );
-        const IconLink = ({size=24, ...props}) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
-        );
+        // --- Core SVG Icons ---
+        const IconDashboard = ({size=24, ...props}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>);
+        const IconChart = ({size=24, ...props}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>);
+        const IconLink = ({size=24, ...props}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>);
 
         // --- Logic ---
         const getTrafficLight = (hrv, bhr, sleepTimeStr) => {
             if (!hrv || !bhr) return null;
-            const hrvVal = parseFloat(hrv);
-            const bhrVal = parseFloat(bhr);
+            const hrvVal = parseFloat(hrv); const bhrVal = parseFloat(bhr);
             let isLateSleep = false;
             if (sleepTimeStr) {
                 const [h, m] = sleepTimeStr.split(':').map(Number);
@@ -130,37 +124,31 @@
         };
 
         const getCycleInfo = (day) => {
-            const d = parseInt(day);
-            if (isNaN(d)) return null;
+            const d = parseInt(day); if (isNaN(d)) return null;
             if (d >= 1 && d <= 4) return { phase: '易水腫期', hint: '體重虛胖勿焦慮' };
-            if (d >= 5 && d <= 7) return { phase: '排水轉折', hint: '水分即將排出' };
-            if (d >= 8 && d <= 14) return { phase: '黃金燃脂', hint: '減脂效率最高' };
+            if (d >= 5 && d <= 7) return { phase: '排水轉折', hint: '水分排出中' };
+            if (d >= 8 && d <= 14) return { phase: '黃金燃脂', hint: '效率最高' };
             return { phase: '黃體保養', hint: '代謝高・食慾增' };
         };
 
         const analyzeComposition = (tbw, weight) => {
-            if (!tbw) return null;
-            const w = parseFloat(tbw);
-            if (w > 29.2) return { type: 'water', text: '💧 高度水腫', color: 'text-blue-500', bg: 'bg-blue-50' };
+            if (!tbw) return null; const w = parseFloat(tbw);
+            if (w > 29.2) return { type: 'water', text: '💧 高度水腫', color: 'text-blue-600', bg: 'bg-blue-50' };
             if (w < 28.8) return { type: 'dry', text: '🍂 身體偏乾', color: 'text-amber-600', bg: 'bg-amber-50' };
             return { type: 'ok', text: '✨ 水分標準', color: 'text-emerald-600', bg: 'bg-emerald-50' };
         };
 
-        // --- Chart Component ---
+        // --- Chart Component (Optimized Visuals + Data Table) ---
         const ChartView = ({ historyData }) => {
-            const canvasRef1 = useRef(null); 
-            const canvasRef2 = useRef(null); 
-            const canvasRef3 = useRef(null);
-            
-            const chartInstance1 = useRef(null);
-            const chartInstance2 = useRef(null);
-            const chartInstance3 = useRef(null);
-            
+            const canvasRef1 = useRef(null); const canvasRef2 = useRef(null); const canvasRef3 = useRef(null);
+            const chartInstance1 = useRef(null); const chartInstance2 = useRef(null); const chartInstance3 = useRef(null);
             const [days, setDays] = useState(14); 
 
             useEffect(() => {
                 const sortedDates = Object.keys(historyData).sort().slice(-days);
-                const labels = sortedDates.map(d => d.slice(5).replace('-','/')); 
+                
+                // 修正：只取日期部分 (YYYY-MM-DD) 的後 5 碼 (MM-DD)，避免包含時間
+                const labels = sortedDates.map(d => d.substring(5, 10).replace('-','/')); 
                 
                 const weights = sortedDates.map(d => historyData[d].weight);
                 const tbws = sortedDates.map(d => historyData[d].tbw);
@@ -169,117 +157,171 @@
                 const bodyFats = sortedDates.map(d => historyData[d].bodyFat);
 
                 const fatMassRaw = weights.map((w, i) => {
-                    const bf = parseFloat(bodyFats[i]);
-                    const weight = parseFloat(w);
+                    const bf = parseFloat(bodyFats[i]); const weight = parseFloat(w);
                     return (bf && weight) ? (weight * bf / 100) : null;
                 });
-
                 const fatMassTrend = fatMassRaw.map((val, index, arr) => {
-                    if (val === null) return null;
-                    let sum = 0, count = 0;
-                    for (let i = Math.max(0, index - 6); i <= index; i++) {
-                        if (arr[i] !== null) { sum += arr[i]; count++; }
-                    }
+                    if (val === null) return null; let sum = 0, count = 0;
+                    for (let i = Math.max(0, index - 6); i <= index; i++) { if (arr[i] !== null) { sum += arr[i]; count++; } }
                     return count ? (sum / count) : null;
                 });
 
-                const commonOptions = {
-                    responsive: true,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Noto Sans TC'" } } },
-                        title: { display: false }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                        y: { display: false },
-                    },
-                    elements: { point: { radius: 2, hitRadius: 10 } }
-                };
+                // Chart Global Defaults
+                Chart.defaults.font.family = "'Noto Sans TC', sans-serif";
+                Chart.defaults.color = '#881337';
+                Chart.defaults.scale.grid.display = false;
 
                 const destroyCharts = () => {
-                    [chartInstance1, chartInstance2, chartInstance3].forEach(ref => {
-                        if (ref.current) { ref.current.destroy(); ref.current = null; }
-                    });
+                    [chartInstance1, chartInstance2, chartInstance3].forEach(ref => { if (ref.current) { ref.current.destroy(); ref.current = null; } });
                 };
-
-                // Destroy previous instances before creating new ones
                 destroyCharts();
 
+                // 1. Body Wave (Gradient Style)
                 if (canvasRef1.current) {
-                    chartInstance1.current = new Chart(canvasRef1.current, {
+                    const ctx = canvasRef1.current.getContext('2d');
+                    const gradientFill = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradientFill.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+                    gradientFill.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+                    chartInstance1.current = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: labels,
                             datasets: [
-                                { label: '體重', data: weights, borderColor: '#881337', backgroundColor: '#881337', borderWidth: 2, tension: 0.4 },
-                                { label: '體水', data: tbws, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 1, fill: true, tension: 0.4 }
+                                { label: '體重', data: weights, borderColor: '#be123c', backgroundColor: '#be123c', borderWidth: 2, tension: 0.3 },
+                                { label: '體水', data: tbws, borderColor: '#3b82f6', backgroundColor: gradientFill, borderWidth: 1, fill: true, tension: 0.3, pointRadius: 2 }
                             ]
                         },
-                        options: commonOptions
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 6 } } }, 
+                            scales: { 
+                                x: { display: false }, // 隱藏X軸時間
+                                y: { display: true, position: 'left', grid: {color: 'rgba(0,0,0,0.03)'} } 
+                            } 
+                        }
                     });
                 }
 
+                // 2. Real Fat Trend (Bar Gradient Style)
                 if (canvasRef3.current) {
-                    chartInstance3.current = new Chart(canvasRef3.current, {
+                    const ctx = canvasRef3.current.getContext('2d');
+                    const barGradient = ctx.createLinearGradient(0, 0, 0, 300);
+                    barGradient.addColorStop(0, 'rgba(203, 213, 225, 0.8)');
+                    barGradient.addColorStop(1, 'rgba(203, 213, 225, 0.2)');
+
+                    chartInstance3.current = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: labels,
                             datasets: [
-                                { type: 'line', label: '真實趨勢 (濾水)', data: fatMassTrend, borderColor: '#be123c', backgroundColor: '#be123c', borderWidth: 3, pointRadius: 0, tension: 0.4 },
-                                { type: 'bar', label: '每日數值', data: fatMassRaw, backgroundColor: '#e2e8f0', borderRadius: 4, barThickness: 8 }
+                                { type: 'line', label: '真實趨勢', data: fatMassTrend, borderColor: '#9f1239', borderWidth: 3, tension: 0.4, pointRadius: 0 },
+                                { type: 'bar', label: '每日估算', data: fatMassRaw, backgroundColor: barGradient, borderRadius: 4, barThickness: 10 }
                             ]
                         },
-                        options: commonOptions
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { display: false } }, 
+                            scales: { 
+                                x: { display: false }, // 隱藏X軸時間
+                                y: { display: true, grid: {color: 'rgba(0,0,0,0.03)'} } 
+                            } 
+                        }
                     });
                 }
 
+                // 3. Nervous System
                 if (canvasRef2.current) {
                     chartInstance2.current = new Chart(canvasRef2.current, {
                         type: 'line',
                         data: {
                             labels: labels,
                             datasets: [
-                                { label: 'HRV', data: hrvs, borderColor: '#10b981', backgroundColor: '#10b981', borderWidth: 2, tension: 0.4 },
-                                { label: '心率', data: bhrs, borderColor: '#f43f5e', backgroundColor: '#f43f5e', borderWidth: 1, borderDash: [5, 5], tension: 0.4 }
+                                { label: 'HRV', data: hrvs, borderColor: '#10b981', backgroundColor: '#10b981', borderWidth: 2, tension: 0.3 },
+                                { label: '心率', data: bhrs, borderColor: '#f43f5e', backgroundColor: '#f43f5e', borderWidth: 1, borderDash: [4, 4], tension: 0.3 }
                             ]
                         },
-                        options: commonOptions
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 6 } } }, 
+                            scales: { 
+                                x: { display: false }, // 隱藏X軸時間
+                                y: { display: true, grid: {color: 'rgba(0,0,0,0.03)'} } 
+                            } 
+                        }
                     });
                 }
+                return () => destroyCharts();
+            }, [historyData, days]);
 
-                return () => destroyCharts(); // Cleanup on unmount
-
+            // Data Table View (恢復此功能)
+            const dataTable = useMemo(() => {
+                return Object.keys(historyData).sort().reverse().slice(0, days).map(date => ({
+                    date, ...historyData[date]
+                }));
             }, [historyData, days]);
 
             return (
-                <div className="space-y-6 animate-fade-in pb-32 pt-4">
-                    <div className="flex justify-center gap-2 mb-6">
+                <div className="space-y-6 animate-fade-in pt-4 px-1">
+                    <div className="flex justify-center gap-2 mb-4">
                         {[7, 14, 30].map(d => (
                             <button key={d} onClick={() => setDays(d)}
-                                className={`px-5 py-2 rounded-full text-xs font-bold tracking-widest transition-all ${days === d ? 'bg-rose-900 text-white shadow-lg shadow-rose-900/20' : 'bg-white text-rose-300 border border-rose-100'}`}>
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest transition-all ${days === d ? 'bg-rose-900 text-white shadow-md' : 'bg-white text-rose-400 border border-rose-100'}`}>
                                 {d} DAYS
                             </button>
                         ))}
                     </div>
                     
-                    <div className="glass p-5 rounded-3xl shadow-sm">
+                    <div className="glass p-5 rounded-[1.5rem] shadow-sm">
                         <div className="flex items-center gap-2 mb-2">
                             <SafeIcon icon={Sparkles} size={16} className="text-rose-500" />
                             <h3 className="text-sm font-bold text-rose-900 tracking-wide">真實體脂趨勢</h3>
                         </div>
-                        <div className="h-64"><canvas ref={canvasRef3}></canvas></div>
-                        <p className="text-[10px] text-rose-400 mt-3 text-center opacity-80">紅線平穩 = 安心。忽略每日水分雜訊。</p>
+                        <div className="h-56"><canvas ref={canvasRef3}></canvas></div>
+                        <p className="text-[10px] text-rose-400 mt-2 text-center bg-rose-50 p-1 rounded">忽略灰色長條雜訊，請專注於 <span className="font-bold text-rose-700">深紅線</span> 走向</p>
                     </div>
 
-                    <div className="glass p-5 rounded-3xl shadow-sm">
-                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">體態波段 (體重 vs 體水)</h3>
+                    <div className="glass p-5 rounded-[1.5rem] shadow-sm">
+                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">體態波段 (Weight vs Water)</h3>
                         <div className="h-48"><canvas ref={canvasRef1}></canvas></div>
                     </div>
 
-                    <div className="glass p-5 rounded-3xl shadow-sm">
-                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">神經修復 (HRV vs BHR)</h3>
+                    <div className="glass p-5 rounded-[1.5rem] shadow-sm">
+                        <h3 className="text-sm font-bold text-rose-900 tracking-wide mb-2">神經修復 (HRV vs Heart Rate)</h3>
                         <div className="h-48"><canvas ref={canvasRef2}></canvas></div>
+                    </div>
+
+                    {/* 詳細數據列表 (已修復) */}
+                    <div className="glass p-5 rounded-[1.5rem] shadow-sm mb-8">
+                        <h3 className="text-xs font-bold text-rose-900 tracking-wider uppercase mb-4 flex items-center gap-2">
+                            <SafeIcon icon={List} size={14}/> 詳細數據列表
+                        </h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-rose-900 text-right">
+                                <thead>
+                                    <tr className="border-b border-rose-100 text-rose-400">
+                                        <th className="pb-2 text-left">日期</th>
+                                        <th className="pb-2">體重</th>
+                                        <th className="pb-2">體水</th>
+                                        <th className="pb-2">HRV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {dataTable.map(row => (
+                                        <tr key={row.date} className="border-b border-rose-50 last:border-0 hover:bg-rose-50/50">
+                                            {/* 修正：只取 MM/DD，避免顯示時間 */}
+                                            <td className="py-2 text-left font-bold">{row.date.substring(5, 10).replace('-','/')}</td>
+                                            <td className="py-2">{row.weight}</td>
+                                            <td className="py-2 text-blue-500">{row.tbw}</td>
+                                            <td className="py-2 text-emerald-600 font-bold">{row.hrv}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             );
@@ -288,25 +330,20 @@
         const InputView = ({ today, setToday, data, setData, cycleDay, cycleInfo, traffic, saveData, resetCycle, compAnalysis, isSyncing }) => (
             <div className="space-y-6 animate-fade-in pb-32">
                  {/* Header Card */}
-                 <div className="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-600 to-rose-800 text-white p-6 pt-10 pb-8 rounded-b-[2.5rem] shadow-xl shadow-rose-500/20 -mx-4 sm:mx-0 sm:rounded-t-[2.5rem]">
-                    <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                 <div className="relative overflow-hidden bg-gradient-to-br from-rose-600 via-rose-500 to-pink-600 text-white p-6 pt-10 pb-8 rounded-b-[2.5rem] shadow-xl shadow-rose-500/20 -mx-4 sm:mx-0 sm:rounded-t-[2.5rem]">
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-6">
                             <div>
-                                <div className="flex items-center gap-2 opacity-90">
-                                    <span className="text-xs font-bold tracking-[0.2em] uppercase">Cycle Day</span>
-                                </div>
-                                <h1 className="text-4xl font-black tracking-tight mt-1" style={{fontFamily: '"Playfair Display", serif'}}>{cycleDay}</h1>
+                                <span className="text-[10px] font-bold tracking-[0.2em] opacity-80 uppercase">Cycle Day</span>
+                                <h1 className="text-5xl font-black tracking-tight mt-0" style={{fontFamily: '"Playfair Display", serif'}}>{cycleDay}</h1>
                                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full mt-2 border border-white/10">
-                                    <span className="text-xs font-bold text-white">{cycleInfo.phase}</span>
-                                    <span className="text-[10px] text-white/80 border-l border-white/30 pl-2">{cycleInfo.hint}</span>
+                                    <span className="text-xs font-bold">{cycleInfo.phase}</span>
+                                    <span className="text-[10px] opacity-80 border-l border-white/30 pl-2">{cycleInfo.hint}</span>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-3">
-                                <div className="bg-black/20 backdrop-blur-sm rounded-lg flex items-center px-3 py-1.5">
-                                    <input type="date" value={today} onChange={(e) => setToday(e.target.value)}
-                                        className="bg-transparent text-white text-xs font-bold border-none outline-none text-right w-24 uppercase tracking-wider" />
-                                </div>
+                                <input type="date" value={today} onChange={(e) => setToday(e.target.value)}
+                                    className="bg-black/20 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border-none outline-none text-right w-24" />
                                 <button onClick={resetCycle} className="text-[10px] bg-white text-rose-600 px-3 py-1.5 rounded-full font-bold shadow-sm hover:scale-105 transition-transform flex items-center gap-1">
                                     <SafeIcon icon={RefreshCw} size={10} /> MC Reset
                                 </button>
@@ -315,75 +352,69 @@
                         {traffic ? (
                             <div className={`glass-dark p-4 rounded-2xl flex items-center justify-between border-l-4 ${traffic.status === 'red' ? 'border-l-rose-400' : (traffic.status === 'green' ? 'border-l-emerald-400' : 'border-l-amber-400')}`}>
                                 <div>
-                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest text-rose-100">Daily Advisor</p>
-                                    <p className="font-bold text-lg text-white">{traffic.title}</p>
-                                    <p className="text-xs text-rose-200">{traffic.sub}</p>
+                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest text-rose-100">Advisor</p>
+                                    <p className="font-bold text-lg">{traffic.title}</p>
+                                    <p className="text-[10px] opacity-80">{traffic.sub}</p>
                                 </div>
                                 <div className="text-right max-w-[50%]">
-                                    <p className="text-xs font-medium leading-relaxed opacity-90 text-white">{traffic.desc}</p>
+                                    <p className="text-xs font-medium leading-relaxed opacity-90">{traffic.desc}</p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-black/10 backdrop-blur-sm p-4 rounded-2xl text-center text-white/60 text-sm">
-                                等待輸入晨間數據...
-                            </div>
+                            <div className="bg-black/10 backdrop-blur-sm p-4 rounded-2xl text-center text-white/60 text-xs">等待數據...</div>
                         )}
                     </div>
                 </div>
 
                 <div className="px-2 sm:px-0 space-y-5">
-                    <div className="glass p-5 rounded-3xl">
+                    <div className="glass p-5 rounded-[2rem]">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                                <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={Scale} size={18} /></div>
-                                <h2 className="text-base font-bold text-rose-950">體態組成</h2>
+                                <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={Scale} size={16} /></div>
+                                <h2 className="text-sm font-bold text-rose-950 uppercase tracking-wide">Composition</h2>
                             </div>
                             {compAnalysis && <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${compAnalysis.bg} ${compAnalysis.color}`}>{compAnalysis.text}</span>}
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                             <NumberInput label="體重" unit="kg" value={data.weight} onChange={v => setData({...data, weight: v})} placeholder="--" />
                             <NumberInput label="體脂率" unit="%" value={data.bodyFat} onChange={v => setData({...data, bodyFat: v})} placeholder="--" />
-                            <NumberInput label="體水重" unit="kg" value={data.tbw} onChange={v => setData({...data, tbw: v})} placeholder="29.0" />
+                            <NumberInput label="體水重" unit="kg" value={data.tbw} onChange={v => setData({...data, tbw: v})} placeholder="--" />
                         </div>
                     </div>
-                    <div className="glass p-5 rounded-3xl">
+                    <div className="glass p-5 rounded-[2rem]">
                         <div className="flex items-center gap-2 mb-4">
-                             <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={Activity} size={18} /></div>
-                            <h2 className="text-base font-bold text-rose-950">神經與修復</h2>
+                             <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={Activity} size={16} /></div>
+                            <h2 className="text-sm font-bold text-rose-950 uppercase tracking-wide">Nervous System</h2>
                         </div>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <NumberInput label="HRV" unit="ms" value={data.hrv} onChange={v => setData({...data, hrv: v})} placeholder="--" step="1" />
-                                <NumberInput label="靜止心率" unit="bpm" value={data.bhr} onChange={v => setData({...data, bhr: v})} placeholder="--" step="1" />
-                            </div>
-                            <div className="pt-2">
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-[10px] font-bold text-rose-300 uppercase tracking-widest pl-1">入睡時間</label>
-                                    <span className="text-[10px] text-rose-500 font-bold">{data.sleepTime && ((parseInt(data.sleepTime.split(':')[0]) >= 23 && parseInt(data.sleepTime.split(':')[1]) >= 30) || (parseInt(data.sleepTime.split(':')[0]) < 4)) ? '🌙 注意作息' : ''}</span>
-                                </div>
-                                <input type="time" value={data.sleepTime} onChange={(e) => setData({...data, sleepTime: e.target.value})}
-                                    className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-3 text-lg font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium" />
-                            </div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <NumberInput label="HRV" unit="ms" value={data.hrv} onChange={v => setData({...data, hrv: v})} placeholder="--" step="1" />
+                            <NumberInput label="靜止心率" unit="bpm" value={data.bhr} onChange={v => setData({...data, bhr: v})} placeholder="--" step="1" />
+                        </div>
+                        <div className="relative">
+                             <label className="text-[10px] font-bold text-rose-300 uppercase tracking-widest pl-1 mb-1 block">入睡時間</label>
+                             <input type="time" value={data.sleepTime} onChange={(e) => setData({...data, sleepTime: e.target.value})}
+                                className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-3 text-base font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 transition-all input-premium" />
                         </div>
                     </div>
-                    <div className="glass p-5 rounded-3xl">
+                    <div className="glass p-5 rounded-[2rem]">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={TrendingUp} size={18} /></div>
-                            <h2 className="text-base font-bold text-rose-950">有氧累積</h2>
+                            <div className="p-2 bg-rose-100 rounded-full text-rose-600"><SafeIcon icon={TrendingUp} size={16} /></div>
+                            <h2 className="text-sm font-bold text-rose-950 uppercase tracking-wide">Cardio (Zone 2)</h2>
                         </div>
                          <div className="flex items-center gap-3">
                             <div className="flex-1">
                                 <input type="number" inputMode="decimal" value={data.zone2} onChange={(e) => setData({...data, zone2: e.target.value})} placeholder="0"
-                                    className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-4 text-xl font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium" />
+                                    className="w-full bg-white border border-rose-100 rounded-2xl px-4 py-4 text-xl font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 transition-all input-premium" />
                             </div>
-                            <span className="text-rose-400 font-bold text-sm">mins</span>
+                            <span className="text-rose-400 font-bold text-xs uppercase">Minutes</span>
                          </div>
                     </div>
                 </div>
+                
                 <button onClick={saveData} disabled={isSyncing}
-                    className={`w-full py-4 rounded-2xl font-bold text-base shadow-lg shadow-rose-900/10 flex items-center justify-center gap-2 active:scale-95 transition-all
+                    className={`w-full py-4 rounded-2xl font-bold text-sm tracking-widest shadow-xl shadow-rose-900/20 flex items-center justify-center gap-2 active:scale-95 transition-all mb-4
                     ${isSyncing ? 'bg-gray-400 text-white' : 'bg-rose-900 text-white'}`}>
-                    {isSyncing ? <div className="spinner"></div> : <SafeIcon icon={CloudLightning} size={18} />}
+                    {isSyncing ? <div className="spinner"></div> : <SafeIcon icon={CloudLightning} size={16} />}
                     {isSyncing ? 'SYNCING...' : 'SAVE DATA'}
                 </button>
             </div>
@@ -394,8 +425,8 @@
                 <label className="text-[10px] font-bold text-rose-300 uppercase tracking-widest pl-1">{label}</label>
                 <div className="relative group">
                     <input type="number" inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} step={step}
-                        className="w-full bg-white border border-rose-100 rounded-2xl px-3 py-3 text-lg font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-all input-premium placeholder-rose-100" />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-300 pointer-events-none">{unit}</span>
+                        className="w-full bg-white border border-rose-100 rounded-2xl px-3 py-3 text-lg font-bold text-rose-900 outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 transition-all input-premium placeholder-rose-100" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-rose-300 pointer-events-none">{unit}</span>
                 </div>
             </div>
         );
@@ -432,48 +463,35 @@
                 else setData({ weight: '', bodyFat: '', tbw: '', hrv: '', bhr: '', sleepTime: '', zone2: '' });
             }, [today]);
 
-            // ✨ 新增雲端同步區塊：一打開 App 就去 Google Sheet 抓資料
+            // ✨ 自動同步邏輯 (保留您提供的版本)
             useEffect(() => {
                 const fetchCloudData = async () => {
                     if (!settings.sheetUrl) return;
-
                     try {
                         console.log("正在同步雲端資料...");
-                        const response = await fetch(settings.sheetUrl); // 這裡會呼叫後端的 doGet
+                        const response = await fetch(settings.sheetUrl); // 呼叫 doGet
                         const dataArray = await response.json();
 
                         if (Array.isArray(dataArray)) {
-                            // 轉換資料格式：從 Array 轉成 Object
                             const cloudHistory = {};
                             dataArray.forEach(item => {
-                                if (item.date) {
-                                    cloudHistory[item.date] = item;
-                                }
+                                if (item.date) cloudHistory[item.date] = item;
                             });
-
-                            // 1. 更新歷史資料 State
                             setHistoryData(prev => ({...prev, ...cloudHistory}));
-                            
-                            // 2. 更新 LocalStorage (把雲端資料存入手機)
                             const currentLocal = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
                             const mergedData = { ...currentLocal, ...cloudHistory };
                             localStorage.setItem('ht_v4_history', JSON.stringify(mergedData));
-
-                            // 3. 如果雲端有「今天」的資料，自動填入格子
                             if (cloudHistory[today]) {
                                 setData(cloudHistory[today]);
                                 console.log("已自動填入今日雲端資料");
                             }
                         }
                     } catch (e) {
-                        console.error("雲端同步失敗 (可能是離線或權限問題):", e);
-                        // 失敗不跳 Alert，以免干擾使用者體驗
+                        console.error("雲端同步失敗:", e);
                     }
                 };
-
-                // 執行同步
                 fetchCloudData();
-            }, []); // 空陣列 [] 代表只在 App 剛開啟時執行一次
+            }, []);
 
             const saveData = async () => {
                 const hist = JSON.parse(localStorage.getItem('ht_v4_history') || '{}');
@@ -484,7 +502,7 @@
                 if (settings.sheetUrl) {
                     setIsSyncing(true);
                     try {
-                        // FIX: Change Content-Type to text/plain to avoid CORS preflight and ensure GAS receives the body in no-cors mode
+                        // 使用 text/plain 繞過 CORS
                         await fetch(settings.sheetUrl, { 
                             method: 'POST', 
                             mode: 'no-cors', 
@@ -522,23 +540,30 @@
                             <ChartView historyData={historyData} />
                         )}
                     </div>
-                    <div className="fixed bottom-6 left-6 right-6 z-30 max-w-[calc(28rem-3rem)] mx-auto">
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/50 rounded-full px-2 py-2 flex justify-between items-center shadow-xl shadow-rose-900/5">
+
+                    {/* Fixed Bottom Nav (穩定版) */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-rose-100 z-30 px-6 py-3 safe-area-pb">
+                        <div className="flex justify-around items-center max-w-md mx-auto">
                             <button onClick={() => setView('input')} 
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${view === 'input' ? 'bg-rose-900 text-white shadow-md' : 'text-rose-300 hover:bg-rose-50'}`}>
-                                <IconDashboard size={18} />
-                                {view === 'input' && <span className="text-xs font-bold tracking-wide animate-fade-in">TODAY</span>}
+                                className={`flex flex-col items-center gap-1 transition-colors ${view === 'input' ? 'text-rose-700' : 'text-rose-300'}`}>
+                                <IconDashboard size={24} />
+                                <span className="text-[10px] font-bold tracking-wide">TODAY</span>
                             </button>
+                            
                             <button onClick={() => setView('chart')} 
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full transition-all duration-300 ${view === 'chart' ? 'bg-rose-900 text-white shadow-md' : 'text-rose-300 hover:bg-rose-50'}`}>
-                                <IconChart size={18} />
-                                {view === 'chart' && <span className="text-xs font-bold tracking-wide animate-fade-in">TRENDS</span>}
+                                className={`flex flex-col items-center gap-1 transition-colors ${view === 'chart' ? 'text-rose-700' : 'text-rose-300'}`}>
+                                <IconChart size={24} />
+                                <span className="text-[10px] font-bold tracking-wide">TRENDS</span>
                             </button>
-                            <button onClick={() => setShowConfig(!showConfig)} className="w-12 h-12 flex items-center justify-center rounded-full text-rose-300 hover:bg-rose-50 transition-colors">
-                                <IconLink size={18} />
+
+                            <button onClick={() => setShowConfig(!showConfig)} 
+                                className={`flex flex-col items-center gap-1 transition-colors ${showConfig ? 'text-rose-700' : 'text-rose-300'}`}>
+                                <IconLink size={24} />
+                                <span className="text-[10px] font-bold tracking-wide">SYNC</span>
                             </button>
                         </div>
                     </div>
+
                     {showConfig && (
                         <div className="fixed inset-0 bg-rose-900/30 backdrop-blur-sm z-40 flex items-center justify-center p-6 animate-fade-in">
                             <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
