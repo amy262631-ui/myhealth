@@ -434,9 +434,23 @@
             </div>
         );
 
+        
+        // Helper to get local date string YYYY-MM-DD
+        // (新增這個函式：用來強制抓取手機當地的年月日，而不是 UTC 時間)
+        const getLocalToday = () => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
         const App = () => {
             const [view, setView] = useState('input');
-            const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
+            
+            // (修改這裡：將原本的 new Date().toISOString()... 改成 getLocalToday())
+            const [today, setToday] = useState(getLocalToday()); 
+            
             const [settings, setSettings] = useState(() => {
                 const s = localStorage.getItem('ht_v4_settings'); 
                 const defaultUrl = 'https://script.google.com/macros/s/AKfycbx49ZIG4Ht79xFffN9ZSejKcrBNuVp61MGdEByGiPGIg6pVa3xU0yL_ZZfSioYASfXc/exec';
@@ -445,7 +459,8 @@
                     if (!parsed.sheetUrl) return { ...parsed, sheetUrl: defaultUrl };
                     return parsed;
                 }
-                return { periodStartDate: new Date().toISOString().split('T')[0], sheetUrl: defaultUrl };
+                // (修改這裡：將原本的 new Date().toISOString()... 改成 getLocalToday())
+                return { periodStartDate: getLocalToday(), sheetUrl: defaultUrl }; 
             });
             const [data, setData] = useState({ weight: '', bodyFat: '', tbw: '', hrv: '', bhr: '', sleepTime: '', zone2: '' });
             const [isSyncing, setIsSyncing] = useState(false);
